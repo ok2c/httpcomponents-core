@@ -25,7 +25,7 @@
  *
  */
 
-package org.apache.hc.core5.testing.compatibility.http1;
+package org.apache.hc.core5.testing.compatibility;
 
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
@@ -58,8 +58,6 @@ import org.apache.hc.core5.http2.impl.nio.bootstrap.H2RequesterBootstrap;
 import org.apache.hc.core5.io.CloseMode;
 import org.apache.hc.core5.reactor.IOReactorConfig;
 import org.apache.hc.core5.testing.classic.LoggingConnPoolListener;
-import org.apache.hc.core5.testing.compatibility.ContainerImages;
-import org.apache.hc.core5.testing.compatibility.Result;
 import org.apache.hc.core5.testing.nio.LoggingExceptionCallback;
 import org.apache.hc.core5.testing.nio.LoggingH2StreamListener;
 import org.apache.hc.core5.testing.nio.LoggingHttp1StreamListener;
@@ -73,6 +71,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.Network;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -81,8 +80,9 @@ class HttpBinCompatIT {
 
     static final Timeout TIMEOUT = Timeout.ofSeconds(5);
 
+    private static Network NETWORK = Network.newNetwork();
     @Container
-    static final GenericContainer<?> CONTAINER = ContainerImages.httpBin();
+    static final GenericContainer<?> CONTAINER = ContainerImages.httpBin(NETWORK);
 
     static HttpHost targetHost() {
         return new HttpHost("http",

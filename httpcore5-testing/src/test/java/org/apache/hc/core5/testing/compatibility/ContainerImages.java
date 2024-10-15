@@ -26,25 +26,38 @@
  */
 package org.apache.hc.core5.testing.compatibility;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.Network;
+import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.images.builder.ImageFromDockerfile;
 import org.testcontainers.utility.DockerImageName;
 
 public final class ContainerImages {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ContainerImages.class);
 
     public static final String AAA = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     public static final String BBB = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
     public static final String CCC = "ccccccccccccccccccccccccccccccccccccccccccccccccc";
     public static final String PUSHY = "I am being very pushy";
 
+    public static final String APACHE_HTTPD = "test-apache";
+    public static final String NGNIX = "test-ngnix";
+    public static final String HTTPBIN = "test-httpbin";
+
     public static int HTTP_PORT = 80;
 
-    public static GenericContainer<?> httpBin() {
+    public static GenericContainer<?> httpBin(final Network network) {
         return new GenericContainer<>(DockerImageName.parse("kennethreitz/httpbin:latest"))
+                .withNetwork(network)
+                .withNetworkAliases(HTTPBIN)
+                .withLogConsumer(new Slf4jLogConsumer(LOG))
                 .withExposedPorts(HTTP_PORT);
     }
 
-    public static GenericContainer<?> apacheHttpD() {
+    public static GenericContainer<?> apacheHttpD(final Network network) {
         return new GenericContainer<>(new ImageFromDockerfile()
                 .withFileFromClasspath("httpd-vhosts.conf", "docker/httpd/httpd-vhosts.conf")
                 .withFileFromString("pushy", PUSHY)
@@ -66,10 +79,13 @@ public final class ContainerImages {
                                 .copy("bbb", "${www_dir}/")
                                 .copy("ccc", "${www_dir}/")
                                 .build()))
+                .withNetwork(network)
+                .withNetworkAliases(APACHE_HTTPD)
+                .withLogConsumer(new Slf4jLogConsumer(LOG))
                 .withExposedPorts(HTTP_PORT);
     }
 
-    public static GenericContainer<?> ngnix() {
+    public static GenericContainer<?> ngnix(final Network network) {
         return new GenericContainer<>(new ImageFromDockerfile()
                 .withFileFromClasspath("default.conf", "docker/ngnix/default.conf")
                 .withFileFromString("pushy", PUSHY)
@@ -88,6 +104,9 @@ public final class ContainerImages {
                                 .copy("bbb", "${www_dir}/")
                                 .copy("ccc", "${www_dir}/")
                                 .build()))
+                .withNetwork(network)
+                .withNetworkAliases(NGNIX)
+                .withLogConsumer(new Slf4jLogConsumer(LOG))
                 .withExposedPorts(HTTP_PORT);
     }
 

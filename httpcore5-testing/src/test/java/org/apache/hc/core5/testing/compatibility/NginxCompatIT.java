@@ -25,35 +25,43 @@
  *
  */
 
-package org.apache.hc.core5.testing.compatibility.http2;
+package org.apache.hc.core5.testing.compatibility;
 
 import org.apache.hc.core5.http.HttpHost;
-import org.apache.hc.core5.http2.impl.nio.bootstrap.H2RequesterBootstrap;
-import org.apache.hc.core5.testing.compatibility.ContainerImages;
+import org.apache.hc.core5.http.URIScheme;
+import org.apache.hc.core5.testing.compatibility.nio.Http2CompatTest;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.Network;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers(disabledWithoutDocker = true)
-class ApacheHttpDCompatIT extends AbstractHttp2CompatIT {
+class NginxCompatIT {
 
+    private static Network NETWORK = Network.newNetwork();
     @Container
-    static final GenericContainer<?> CONTAINER = ContainerImages.apacheHttpD();
-
-    @Override
-    void configure(final H2RequesterBootstrap bootstrap) {
-    }
-
-    HttpHost targetHost() {
-        return new HttpHost("http",
-                CONTAINER.getHost(),
-                CONTAINER.getMappedPort(ContainerImages.HTTP_PORT));
-    }
+    static final GenericContainer<?> NGNIX_CONTAINER = ContainerImages.ngnix(NETWORK);
 
     @AfterAll
     static void cleanup() {
-        CONTAINER.close();
+        NGNIX_CONTAINER.close();
+    }
+
+    static HttpHost targetContainerHost() {
+        return new HttpHost(URIScheme.HTTP.id, NGNIX_CONTAINER.getHost(), NGNIX_CONTAINER.getMappedPort(ContainerImages.HTTP_PORT));
+    }
+
+    @Nested
+    @DisplayName("HTTP/2, plain")
+    class Http2 extends Http2CompatTest {
+
+        public Http2() throws Exception {
+            super(targetContainerHost());
+        }
+
     }
 
 }
