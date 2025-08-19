@@ -117,6 +117,7 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
     private final HPackEncoder hPackEncoder;
     private final HPackDecoder hPackDecoder;
     private final Map<Integer, H2Stream> streamMap;
+    private final Queue<H2Stream> streams;
     private final Queue<AsyncPingHandler> pingHandlers;
     private final AtomicInteger connInputWindow;
     private final AtomicInteger connOutputWindow;
@@ -165,6 +166,7 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
         this.hPackEncoder = new HPackEncoder(H2Config.INIT.getHeaderTableSize(), CharCodingSupport.createEncoder(charCodingConfig));
         this.hPackDecoder = new HPackDecoder(H2Config.INIT.getHeaderTableSize(), CharCodingSupport.createDecoder(charCodingConfig));
         this.streamMap = new ConcurrentHashMap<>();
+        this.streams = new ConcurrentLinkedQueue<>();
         this.remoteConfig = H2Config.INIT;
         this.connInputWindow = new AtomicInteger(H2Config.INIT.getInitialWindowSize());
         this.connOutputWindow = new AtomicInteger(H2Config.INIT.getInitialWindowSize());
@@ -480,10 +482,9 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
             }
             final int pendingOutputRequests = outputRequests.get();
             boolean outputPending = false;
-            if (!streamMap.isEmpty() && connOutputWindow.get() > 0) {
-                for (final Iterator<Map.Entry<Integer, H2Stream>> it = streamMap.entrySet().iterator(); it.hasNext(); ) {
-                    final Map.Entry<Integer, H2Stream> entry = it.next();
-                    final H2Stream stream = entry.getValue();
+            if (!streams.isEmpty() && connOutputWindow.get() > 0) {
+                for (final Iterator<H2Stream> it = streams.iterator(); it.hasNext(); ) {
+                    final H2Stream stream = it.next();
                     if (!stream.isLocalClosed()
                             && stream.getOutputWindow().get() > 0
                             && stream.isOutputReady()) {
@@ -510,12 +511,12 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
         }
         if (connState.compareTo(ConnectionHandshake.GRACEFUL_SHUTDOWN) == 0) {
             int liveStreams = 0;
-            for (final Iterator<Map.Entry<Integer, H2Stream>> it = streamMap.entrySet().iterator(); it.hasNext(); ) {
-                final Map.Entry<Integer, H2Stream> entry = it.next();
-                final H2Stream stream = entry.getValue();
+            for (final Iterator<H2Stream> it = streams.iterator(); it.hasNext(); ) {
+                final H2Stream stream = it.next();
                 if (stream.isLocalClosed() && stream.isRemoteClosed()) {
                     stream.releaseResources();
                     it.remove();
+                    streamMap.remove(stream.getId());
                 } else {
                     if (idGenerator.isSameSide(stream.getId()) || stream.getId() <= processedRemoteStreamId) {
                         liveStreams++;
@@ -527,16 +528,16 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
             }
         }
         if (connState.compareTo(ConnectionHandshake.SHUTDOWN) >= 0) {
-            if (!streamMap.isEmpty()) {
-                for (final H2Stream stream : streamMap.values()) {
-                    if (stream.isLocalClosed() && stream.isRemoteClosed()) {
-                        stream.releaseResources();
-                    } else {
-                        stream.fail(new ConnectionClosedException());
-                    }
+            for (final Iterator<H2Stream> it = streams.iterator(); it.hasNext(); ) {
+                final H2Stream stream = it.next();
+                if (stream.isLocalClosed() && stream.isRemoteClosed()) {
+                    stream.releaseResources();
+                } else {
+                    stream.fail(new ConnectionClosedException());
                 }
-                streamMap.clear();
             }
+            streams.clear();
+            streamMap.clear();
             ioSession.getLock().lock();
             try {
                 if (outputBuffer.isEmpty() && outputQueue.isEmpty()) {
@@ -560,12 +561,12 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
                             "Timeout due to inactivity (" + timeout + ")");
         }
         commitFrame(goAway);
-        for (final Iterator<Map.Entry<Integer, H2Stream>> it = streamMap.entrySet().iterator(); it.hasNext(); ) {
-            final Map.Entry<Integer, H2Stream> entry = it.next();
-            final H2Stream stream = entry.getValue();
+        for (final Iterator<H2Stream> it = streams.iterator(); it.hasNext(); ) {
+            final H2Stream stream = it.next();
             stream.fail(new H2StreamResetException(H2Error.NO_ERROR, "Timeout due to inactivity (" + timeout + ")"));
         }
         streamMap.clear();
+        streams.clear();
     }
 
     public final void onDisconnect() {
@@ -577,20 +578,29 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
                 break;
             }
         }
-        for (final Iterator<Map.Entry<Integer, H2Stream>> it = streamMap.entrySet().iterator(); it.hasNext(); ) {
-            final Map.Entry<Integer, H2Stream> entry = it.next();
-            final H2Stream stream = entry.getValue();
+        for (final Iterator<H2Stream> it = streams.iterator(); it.hasNext(); ) {
+            final H2Stream stream = it.next();
             if (stream.isLocalClosed() && stream.isRemoteClosed()) {
                 stream.releaseResources();
             } else {
                 stream.fail(new ConnectionClosedException());
             }
         }
+        streams.clear();
+        streamMap.clear();
         CommandSupport.cancelCommands(ioSession);
     }
 
     private void processPendingCommands() throws IOException, HttpException {
-        while (streamMap.size() < remoteConfig.getMaxConcurrentStreams()) {
+        for (final Iterator<H2Stream> it = streams.iterator(); it.hasNext(); ) {
+            final H2Stream stream = it.next();
+            if (stream.isTerminated()) {
+                streamMap.remove(stream.getId());
+                stream.releaseResources();
+                it.remove();
+            }
+        }
+        while (streams.size() < remoteConfig.getMaxConcurrentStreams()) {
             final Command command = ioSession.poll();
             if (command == null) {
                 break;
@@ -608,12 +618,13 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
                         }
                     }
                     streamMap.clear();
+                    streams.clear();
                     connState = ConnectionHandshake.SHUTDOWN;
                 } else {
                     if (connState.compareTo(ConnectionHandshake.ACTIVE) <= 0) {
                         final RawFrame goAway = frameFactory.createGoAway(processedRemoteStreamId, H2Error.NO_ERROR, "Graceful shutdown");
                         commitFrame(goAway);
-                        connState = streamMap.isEmpty() ? ConnectionHandshake.SHUTDOWN : ConnectionHandshake.GRACEFUL_SHUTDOWN;
+                        connState = streams.isEmpty() ? ConnectionHandshake.SHUTDOWN : ConnectionHandshake.GRACEFUL_SHUTDOWN;
                     }
                 }
                 break;
@@ -633,6 +644,7 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
 
                 final H2Stream stream = new H2Stream(channel, streamHandler, false);
                 streamMap.put(streamId, stream);
+                streams.add(stream);
 
                 if (streamListener != null) {
                     final int initInputWindow = stream.getInputWindow().get();
@@ -666,12 +678,12 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
                 }
             }
             CommandSupport.cancelCommands(ioSession);
-            for (final Iterator<Map.Entry<Integer, H2Stream>> it = streamMap.entrySet().iterator(); it.hasNext(); ) {
-                final Map.Entry<Integer, H2Stream> entry = it.next();
-                final H2Stream stream = entry.getValue();
+            for (final Iterator<H2Stream> it = streams.iterator(); it.hasNext(); ) {
+                final H2Stream stream = it.next();
                 stream.fail(cause);
             }
             streamMap.clear();
+            streams.clear();
             if (!(cause instanceof ConnectionClosedException)) {
                 if (connState.compareTo(ConnectionHandshake.GRACEFUL_SHUTDOWN) <= 0) {
                     final H2Error errorCode;
@@ -714,6 +726,9 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
             } else {
                 throw new H2ConnectionException(H2Error.PROTOCOL_ERROR, "Unexpected stream id: " + streamId);
             }
+        }
+        if (stream.isLocalClosed() && stream.isRemoteClosed()) {
+            throw new H2ConnectionException(H2Error.STREAM_CLOSED, "Stream closed");
         }
         return stream;
     }
@@ -776,8 +791,11 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
                         stream.produceOutput();
                     }
                     streamMap.put(streamId, stream);
+                    streams.add(stream);
                 }
-
+                if (stream.isLocalClosed() && stream.isRemoteClosed()) {
+                    throw new H2ConnectionException(H2Error.STREAM_CLOSED, "Stream closed");
+                }
                 try {
                     consumeHeaderFrame(frame, stream);
 
@@ -967,6 +985,7 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
 
                 final H2Stream promisedStream = new H2Stream(channel, streamHandler, true);
                 streamMap.put(promisedStreamId, promisedStream);
+                streams.add(promisedStream);
 
                 try {
                     consumePushPromiseFrame(frame, payload, promisedStream);
@@ -990,24 +1009,24 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
                 goAwayReceived = true;
                 if (errorCode == H2Error.NO_ERROR.getCode()) {
                     if (connState.compareTo(ConnectionHandshake.ACTIVE) <= 0) {
-                        for (final Iterator<Map.Entry<Integer, H2Stream>> it = streamMap.entrySet().iterator(); it.hasNext(); ) {
-                            final Map.Entry<Integer, H2Stream> entry = it.next();
-                            final int activeStreamId = entry.getKey();
+                        for (final Iterator<H2Stream> it = streams.iterator(); it.hasNext(); ) {
+                            final H2Stream stream = it.next();
+                            final int activeStreamId = stream.getId();
                             if (!idGenerator.isSameSide(activeStreamId) && activeStreamId > processedLocalStreamId) {
-                                final H2Stream stream = entry.getValue();
+                                streamMap.remove(activeStreamId);
                                 stream.fail(new RequestNotExecutedException());
                                 it.remove();
                             }
                         }
                     }
-                    connState = streamMap.isEmpty() ? ConnectionHandshake.SHUTDOWN : ConnectionHandshake.GRACEFUL_SHUTDOWN;
+                    connState = streams.isEmpty() ? ConnectionHandshake.SHUTDOWN : ConnectionHandshake.GRACEFUL_SHUTDOWN;
                 } else {
-                    for (final Iterator<Map.Entry<Integer, H2Stream>> it = streamMap.entrySet().iterator(); it.hasNext(); ) {
-                        final Map.Entry<Integer, H2Stream> entry = it.next();
-                        final H2Stream stream = entry.getValue();
+                    for (final Iterator<H2Stream> it = streams.iterator(); it.hasNext(); ) {
+                        final H2Stream stream = it.next();
                         stream.fail(new H2StreamResetException(errorCode, "Connection terminated by the peer (" + errorCode + ")"));
                     }
                     streamMap.clear();
+                    streams.clear();
                     connState = ConnectionHandshake.SHUTDOWN;
                 }
             }
@@ -1192,9 +1211,8 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
     }
 
     private void produceOutput() throws HttpException, IOException {
-        for (final Iterator<Map.Entry<Integer, H2Stream>> it = streamMap.entrySet().iterator(); it.hasNext(); ) {
-            final Map.Entry<Integer, H2Stream> entry = it.next();
-            final H2Stream stream = entry.getValue();
+        for (final Iterator<H2Stream> it = streams.iterator(); it.hasNext(); ) {
+            final H2Stream stream = it.next();
             if (!stream.isLocalClosed() && stream.getOutputWindow().get() > 0) {
                 stream.produceOutput();
             }
@@ -1226,10 +1244,9 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
         }
 
         if (delta != 0) {
-            if (!streamMap.isEmpty()) {
-                for (final Iterator<Map.Entry<Integer, H2Stream>> it = streamMap.entrySet().iterator(); it.hasNext(); ) {
-                    final Map.Entry<Integer, H2Stream> entry = it.next();
-                    final H2Stream stream = entry.getValue();
+            if (!streams.isEmpty()) {
+                for (final Iterator<H2Stream> it = streams.iterator(); it.hasNext(); ) {
+                    final H2Stream stream = it.next();
                     try {
                         updateOutputWindow(stream.getId(), stream.getOutputWindow(), delta);
                     } catch (final ArithmeticException ex) {
@@ -1247,10 +1264,9 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
         final int delta = localConfig.getInitialWindowSize() - initInputWinSize;
         initInputWinSize = localConfig.getInitialWindowSize();
 
-        if (delta != 0 && !streamMap.isEmpty()) {
-            for (final Iterator<Map.Entry<Integer, H2Stream>> it = streamMap.entrySet().iterator(); it.hasNext(); ) {
-                final Map.Entry<Integer, H2Stream> entry = it.next();
-                final H2Stream stream = entry.getValue();
+        if (delta != 0 && !streams.isEmpty()) {
+            for (final Iterator<H2Stream> it = streams.iterator(); it.hasNext(); ) {
+                final H2Stream stream = it.next();
                 try {
                     updateInputWindow(stream.getId(), stream.getInputWindow(), delta);
                 } catch (final ArithmeticException ex) {
@@ -1324,7 +1340,7 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
                 .append(", connInputWindow=").append(connInputWindow)
                 .append(", connOutputWindow=").append(connOutputWindow)
                 .append(", outputQueue=").append(outputQueue.size())
-                .append(", streamMap=").append(streamMap.size())
+                .append(", streamCount=").append(streams.size())
                 .append(", processedRemoteStreamId=").append(processedRemoteStreamId);
     }
 
@@ -1436,6 +1452,7 @@ abstract class AbstractH2StreamMultiplexer implements Identifiable, HttpConnecti
                     channel, httpProcessor, connMetrics, pushProducer, context);
             final H2Stream stream = new H2Stream(channel, streamHandler, false);
             streamMap.put(promisedStreamId, stream);
+            streams.add(stream);
 
             ioSession.getLock().lock();
             try {
