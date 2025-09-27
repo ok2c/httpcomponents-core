@@ -55,6 +55,7 @@ import org.apache.hc.core5.http.nio.ssl.TlsStrategy;
 import org.apache.hc.core5.http.nio.support.BasicRequestProducer;
 import org.apache.hc.core5.http.nio.support.BasicResponseConsumer;
 import org.apache.hc.core5.http2.HttpVersionPolicy;
+import org.apache.hc.core5.http2.ssl.H2ClientTlsStrategy;
 import org.apache.hc.core5.http2.ssl.H2ServerTlsStrategy;
 import org.apache.hc.core5.reactor.IOReactorConfig;
 import org.apache.hc.core5.reactor.ListenerEndpoint;
@@ -86,29 +87,29 @@ abstract class AlpnTest {
                     final Function<SSLContext, TlsStrategy> serverTlsStrategyFactory,
                     final Function<SSLContext, TlsStrategy> clientTlsStrategyFactory) {
         this.securityProviderResource = new SecurityProviderResource(securityProviderName);
-        this.serverResource = new H2AsyncServerResource(bootstrap -> bootstrap
-                .setVersionPolicy(HttpVersionPolicy.NEGOTIATE)
-                .setTlsStrategy(serverTlsStrategyFactory != null ?
-                        serverTlsStrategyFactory.apply(SSLTestContexts.createServerSSLContext()) :
-                        new H2ServerTlsStrategy(SSLTestContexts.createServerSSLContext()))
-                .setIOReactorConfig(
-                        IOReactorConfig.custom()
-                                .setSoTimeout(TIMEOUT)
-                                .build())
-                .setRequestRouter(RequestRouter.<Supplier<AsyncServerExchangeHandler>>builder()
-                        .addRoute(RequestRouter.LOCAL_AUTHORITY, "*", () -> new EchoHandler(2048))
-                        .resolveAuthority(RequestRouter.LOCAL_AUTHORITY_RESOLVER)
-                        .build())
-        );
-        this.clientResource = new H2AsyncRequesterResource(bootstrap -> bootstrap
-                .setVersionPolicy(HttpVersionPolicy.NEGOTIATE)
-                .setTlsStrategy(clientTlsStrategyFactory != null ?
-                        clientTlsStrategyFactory.apply(SSLTestContexts.createServerSSLContext()) :
-                        new H2ServerTlsStrategy(SSLTestContexts.createServerSSLContext()))
-                .setIOReactorConfig(IOReactorConfig.custom()
-                        .setSoTimeout(TIMEOUT)
-                        .build())
-        );
+        this.serverResource = new H2AsyncServerResource(bootstrap -> {
+            final SSLContext serverSSLContext = SSLTestContexts.createServerSSLContext(securityProviderResource.securityProvider(), "TLS");
+            bootstrap
+                    .setVersionPolicy(HttpVersionPolicy.NEGOTIATE)
+                    .setTlsStrategy(serverTlsStrategyFactory != null ? serverTlsStrategyFactory.apply(serverSSLContext) : new H2ServerTlsStrategy(serverSSLContext))
+                    .setIOReactorConfig(
+                            IOReactorConfig.custom()
+                                    .setSoTimeout(TIMEOUT)
+                                    .build())
+                    .setRequestRouter(RequestRouter.<Supplier<AsyncServerExchangeHandler>>builder()
+                            .addRoute(RequestRouter.LOCAL_AUTHORITY, "*", () -> new EchoHandler(2048))
+                            .resolveAuthority(RequestRouter.LOCAL_AUTHORITY_RESOLVER)
+                            .build());
+        });
+        this.clientResource = new H2AsyncRequesterResource(bootstrap -> {
+            final SSLContext clientSSLContext = SSLTestContexts.createClientSSLContext(securityProviderResource.securityProvider(), "TLS");
+            bootstrap
+                    .setVersionPolicy(HttpVersionPolicy.NEGOTIATE)
+                    .setTlsStrategy(clientTlsStrategyFactory != null ? clientTlsStrategyFactory.apply(clientSSLContext) : new H2ClientTlsStrategy(clientSSLContext))
+                    .setIOReactorConfig(IOReactorConfig.custom()
+                            .setSoTimeout(TIMEOUT)
+                            .build());
+        });
     }
 
     @Test
