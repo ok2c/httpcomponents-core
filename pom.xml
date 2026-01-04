@@ -384,6 +384,7 @@
               <exclude>@org.apache.hc.core5.annotation.Internal</exclude>
               <exclude>org.apache.hc.core5.testing.reactive.ReactiveTestUtils</exclude>
             </excludes>
+            <ignoreMissingClasses>true</ignoreMissingClasses>
           </parameter>
         </configuration>
       </plugin>
