@@ -33,7 +33,7 @@
 
   <artifactId>httpcore5-json</artifactId>
   <name>Apache HttpComponents Core JSON bindings</name>
-  <description>Apache HttpComponents Reactive Streams Bindings</description>
+  <description>Apache HttpComponents JSON bindings</description>
 
   <properties>
     <Automatic-Module-Name>org.apache.httpcomponents.core5.httpcore5.json</Automatic-Module-Name>
