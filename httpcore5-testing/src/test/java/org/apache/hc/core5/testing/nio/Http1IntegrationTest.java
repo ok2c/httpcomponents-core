@@ -153,8 +153,8 @@ abstract class Http1IntegrationTest extends HttpIntegrationTest {
                         new BasicResponseConsumer<>(new StringAsyncEntityConsumer()), null);
                 final Message<HttpResponse, String> result = future.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
                 Assertions.assertNotNull(result);
-                final HttpResponse response1 = result.getHead();
-                final String entity1 = result.getBody();
+                final HttpResponse response1 = result.head();
+                final String entity1 = result.body();
                 Assertions.assertNotNull(response1);
                 Assertions.assertEquals(200, response1.getCode());
                 Assertions.assertEquals("Hi there", entity1);
@@ -191,8 +191,8 @@ abstract class Http1IntegrationTest extends HttpIntegrationTest {
             streamEndpoint.close();
 
             Assertions.assertNotNull(result);
-            final HttpResponse response = result.getHead();
-            final String entity = result.getBody();
+            final HttpResponse response = result.head();
+            final String entity = result.body();
             Assertions.assertNotNull(response);
             Assertions.assertEquals(200, response.getCode());
             Assertions.assertEquals("Hi there", entity);
@@ -229,8 +229,8 @@ abstract class Http1IntegrationTest extends HttpIntegrationTest {
             streamEndpoint.close();
 
             Assertions.assertNotNull(result);
-            final HttpResponse response = result.getHead();
-            final String entity = result.getBody();
+            final HttpResponse response = result.head();
+            final String entity = result.body();
             Assertions.assertNotNull(response);
             Assertions.assertEquals(200, response.getCode());
             Assertions.assertEquals("Hi there", entity);
@@ -266,8 +266,8 @@ abstract class Http1IntegrationTest extends HttpIntegrationTest {
             streamEndpoint.close();
 
             Assertions.assertNotNull(result);
-            final HttpResponse response = result.getHead();
-            final String entity = result.getBody();
+            final HttpResponse response = result.head();
+            final String entity = result.body();
             Assertions.assertNotNull(response);
             Assertions.assertEquals(500, response.getCode());
             Assertions.assertEquals("Go away", entity);
@@ -299,8 +299,8 @@ abstract class Http1IntegrationTest extends HttpIntegrationTest {
                     new BasicResponseConsumer<>(new StringAsyncEntityConsumer()), null);
             final Message<HttpResponse, String> result = future.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
             Assertions.assertNotNull(result);
-            final HttpResponse response1 = result.getHead();
-            final String entity1 = result.getBody();
+            final HttpResponse response1 = result.head();
+            final String entity1 = result.body();
             Assertions.assertNotNull(response1);
             Assertions.assertEquals(200, response1.getCode());
             Assertions.assertEquals("Hi back", entity1);
@@ -357,10 +357,10 @@ abstract class Http1IntegrationTest extends HttpIntegrationTest {
                         new BasicResponseConsumer<>(new StringAsyncEntityConsumer()), null);
                 final Message<HttpResponse, String> result = future.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
                 Assertions.assertNotNull(result);
-                final HttpResponse response1 = result.getHead();
+                final HttpResponse response1 = result.head();
                 Assertions.assertNotNull(response1);
                 Assertions.assertEquals(200, response1.getCode());
-                Assertions.assertNull(result.getBody());
+                Assertions.assertNull(result.body());
             }
         }
     }
@@ -414,10 +414,10 @@ abstract class Http1IntegrationTest extends HttpIntegrationTest {
                     new BasicResponseConsumer<>(new StringAsyncEntityConsumer()), null);
             final Message<HttpResponse, String> result1 = future1.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
             Assertions.assertNotNull(result1);
-            final HttpResponse response1 = result1.getHead();
+            final HttpResponse response1 = result1.head();
             Assertions.assertNotNull(response1);
             Assertions.assertEquals(200, response1.getCode());
-            Assertions.assertEquals("All is well", result1.getBody());
+            Assertions.assertEquals("All is well", result1.body());
 
             Assertions.assertTrue(ioSession.isOpen());
 
@@ -430,10 +430,10 @@ abstract class Http1IntegrationTest extends HttpIntegrationTest {
                     new BasicResponseConsumer<>(new StringAsyncEntityConsumer()), null);
             final Message<HttpResponse, String> result2 = future2.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
             Assertions.assertNotNull(result2);
-            final HttpResponse response2 = result2.getHead();
+            final HttpResponse response2 = result2.head();
             Assertions.assertNotNull(response2);
             Assertions.assertEquals(HttpStatus.SC_UNAUTHORIZED, response2.getCode());
-            Assertions.assertEquals("You shall not pass", result2.getBody());
+            Assertions.assertEquals("You shall not pass", result2.body());
 
             Assertions.assertTrue(ioSession.isOpen());
 
@@ -447,10 +447,10 @@ abstract class Http1IntegrationTest extends HttpIntegrationTest {
                     new BasicResponseConsumer<>(new StringAsyncEntityConsumer()), null);
             final Message<HttpResponse, String> result3 = future3.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
             Assertions.assertNotNull(result3);
-            final HttpResponse response3 = result3.getHead();
+            final HttpResponse response3 = result3.head();
             Assertions.assertNotNull(response3);
             Assertions.assertEquals(200, response3.getCode());
-            Assertions.assertEquals("All is well", result3.getBody());
+            Assertions.assertEquals("All is well", result3.body());
 
             Assertions.assertTrue(ioSession.isOpen());
 
@@ -463,10 +463,10 @@ abstract class Http1IntegrationTest extends HttpIntegrationTest {
                     new BasicResponseConsumer<>(new StringAsyncEntityConsumer()), null);
             final Message<HttpResponse, String> result4 = future4.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
             Assertions.assertNotNull(result4);
-            final HttpResponse response4 = result4.getHead();
+            final HttpResponse response4 = result4.head();
             Assertions.assertNotNull(response4);
             Assertions.assertEquals(HttpStatus.SC_UNAUTHORIZED, response4.getCode());
-            Assertions.assertEquals("You shall not pass", result4.getBody());
+            Assertions.assertEquals("You shall not pass", result4.body());
 
             Assertions.assertFalse(ioSession.isOpen());
         }
@@ -524,10 +524,10 @@ abstract class Http1IntegrationTest extends HttpIntegrationTest {
                     new BasicResponseConsumer<>(new StringAsyncEntityConsumer()), null);
             final Message<HttpResponse, String> result1 = future1.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
             Assertions.assertNotNull(result1);
-            final HttpResponse response1 = result1.getHead();
+            final HttpResponse response1 = result1.head();
             Assertions.assertNotNull(response1);
             Assertions.assertEquals(HttpStatus.SC_UNAUTHORIZED, response1.getCode());
-            Assertions.assertEquals("You shall not pass", result1.getBody());
+            Assertions.assertEquals("You shall not pass", result1.body());
 
             Assertions.assertFalse(streamEndpoint.isOpen());
         }
@@ -564,8 +564,8 @@ abstract class Http1IntegrationTest extends HttpIntegrationTest {
                     new BasicResponseConsumer<>(new StringAsyncEntityConsumer()), null);
             final Message<HttpResponse, String> result = future.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
             Assertions.assertNotNull(result);
-            final HttpResponse response1 = result.getHead();
-            final String entity1 = result.getBody();
+            final HttpResponse response1 = result.head();
+            final String entity1 = result.body();
             Assertions.assertNotNull(response1);
             Assertions.assertEquals(200, response1.getCode());
             Assertions.assertEquals("Hi there back", entity1);
@@ -638,16 +638,16 @@ abstract class Http1IntegrationTest extends HttpIntegrationTest {
 
         final Message<HttpResponse, String> result1 = future1.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
         Assertions.assertNotNull(result1);
-        final HttpResponse response1 = result1.getHead();
-        final String entity1 = result1.getBody();
+        final HttpResponse response1 = result1.head();
+        final String entity1 = result1.body();
         Assertions.assertNotNull(response1);
         Assertions.assertEquals(200, response1.getCode());
         Assertions.assertEquals("Hi back", entity1);
 
         final Message<HttpResponse, String> result2 = future2.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
         Assertions.assertNotNull(result2);
-        final HttpResponse response2 = result2.getHead();
-        final String entity2 = result2.getBody();
+        final HttpResponse response2 = result2.head();
+        final String entity2 = result2.body();
         Assertions.assertNotNull(response2);
         Assertions.assertEquals(200, response2.getCode());
         Assertions.assertEquals("Hi back", entity2);
@@ -714,16 +714,16 @@ abstract class Http1IntegrationTest extends HttpIntegrationTest {
 
         final Message<HttpResponse, String> result1 = future1.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
         Assertions.assertNotNull(result1);
-        final HttpResponse response1 = result1.getHead();
-        final String entity1 = result1.getBody();
+        final HttpResponse response1 = result1.head();
+        final String entity1 = result1.body();
         Assertions.assertNotNull(response1);
         Assertions.assertEquals(200, response1.getCode());
         Assertions.assertEquals("Hi back", entity1);
 
         final Message<HttpResponse, String> result2 = future2.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
         Assertions.assertNotNull(result2);
-        final HttpResponse response2 = result2.getHead();
-        final String entity2 = result2.getBody();
+        final HttpResponse response2 = result2.head();
+        final String entity2 = result2.body();
         Assertions.assertNotNull(response2);
         Assertions.assertEquals(400, response2.getCode());
         Assertions.assertFalse(entity2.isEmpty());
@@ -962,7 +962,7 @@ abstract class Http1IntegrationTest extends HttpIntegrationTest {
             new BasicResponseConsumer<>(new StringAsyncEntityConsumer()), null);
         final Message<HttpResponse, String> result = future.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
         Assertions.assertNotNull(result);
-        final HttpResponse response = result.getHead();
+        final HttpResponse response = result.head();
         Assertions.assertNotNull(response);
         Assertions.assertEquals(505, response.getCode());
     }

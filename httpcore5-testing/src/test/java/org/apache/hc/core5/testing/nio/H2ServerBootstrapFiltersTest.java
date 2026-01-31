@@ -142,7 +142,7 @@ abstract class H2ServerBootstrapFiltersTest {
                 new BasicResponseConsumer<>(new StringAsyncEntityConsumer()), TIMEOUT, null);
         final Message<HttpResponse, String> message = resultFuture.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
         assertThat(message, CoreMatchers.notNullValue());
-        final HttpResponse response = message.getHead();
+        final HttpResponse response = message.head();
         assertThat(response.getCode(), CoreMatchers.equalTo(HttpStatus.SC_OK));
         final Header testFilterHeader = response.getHeader("X-Test-Filter");
         assertThat(testFilterHeader, CoreMatchers.notNullValue());

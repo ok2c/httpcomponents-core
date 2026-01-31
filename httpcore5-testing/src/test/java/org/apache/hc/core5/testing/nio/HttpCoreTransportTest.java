@@ -89,9 +89,9 @@ abstract class HttpCoreTransportTest {
                 new BasicResponseConsumer<>(new StringAsyncEntityConsumer()), TIMEOUT, null);
         final Message<HttpResponse, String> message1 = resultFuture1.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
         assertThat(message1, CoreMatchers.notNullValue());
-        final HttpResponse response1 = message1.getHead();
+        final HttpResponse response1 = message1.head();
         assertThat(response1.getCode(), CoreMatchers.equalTo(HttpStatus.SC_OK));
-        final String body1 = message1.getBody();
+        final String body1 = message1.body();
         assertThat(body1, CoreMatchers.equalTo("some stuff"));
 
         final Future<Message<HttpResponse, String>> resultFuture2 = requester.execute(
@@ -100,9 +100,9 @@ abstract class HttpCoreTransportTest {
                 new BasicResponseConsumer<>(new StringAsyncEntityConsumer()), TIMEOUT, null);
         final Message<HttpResponse, String> message2 = resultFuture2.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
         assertThat(message2, CoreMatchers.notNullValue());
-        final HttpResponse response2 = message2.getHead();
+        final HttpResponse response2 = message2.head();
         assertThat(response2.getCode(), CoreMatchers.equalTo(HttpStatus.SC_OK));
-        final String body2 = message2.getBody();
+        final String body2 = message2.body();
         assertThat(body2, CoreMatchers.equalTo("some other stuff"));
 
         final Future<Message<HttpResponse, String>> resultFuture3 = requester.execute(
@@ -111,9 +111,9 @@ abstract class HttpCoreTransportTest {
                 new BasicResponseConsumer<>(new StringAsyncEntityConsumer()), TIMEOUT, null);
         final Message<HttpResponse, String> message3 = resultFuture3.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
         assertThat(message3, CoreMatchers.notNullValue());
-        final HttpResponse response3 = message3.getHead();
+        final HttpResponse response3 = message3.head();
         assertThat(response3.getCode(), CoreMatchers.equalTo(HttpStatus.SC_OK));
-        final String body3 = message3.getBody();
+        final String body3 = message3.body();
         assertThat(body3, CoreMatchers.equalTo("some more stuff"));
     }
 
@@ -132,9 +132,9 @@ abstract class HttpCoreTransportTest {
                 new BasicResponseConsumer<>(new StringAsyncEntityConsumer()), TIMEOUT, null);
         final Message<HttpResponse, String> message = resultFuture.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
         assertThat(message, CoreMatchers.notNullValue());
-        final HttpResponse response = message.getHead();
+        final HttpResponse response = message.head();
         assertThat(response.getCode(), CoreMatchers.equalTo(HttpStatus.SC_OK));
-        final String body = message.getBody();
+        final String body = message.body();
         assertThat(body, CoreMatchers.equalTo(content));
     }
 
@@ -153,9 +153,9 @@ abstract class HttpCoreTransportTest {
                 new BasicResponseConsumer<>(new StringAsyncEntityConsumer()), TIMEOUT, null);
         final Message<HttpResponse, String> message1 = resultFuture1.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
         assertThat(message1, CoreMatchers.notNullValue());
-        final HttpResponse response1 = message1.getHead();
+        final HttpResponse response1 = message1.head();
         assertThat(response1.getCode(), CoreMatchers.equalTo(HttpStatus.SC_OK));
-        final String body1 = message1.getBody();
+        final String body1 = message1.body();
         assertThat(body1, CoreMatchers.equalTo("some stuff"));
 
         final Future<Message<HttpResponse, String>> resultFuture2 = requester.execute(
@@ -164,9 +164,9 @@ abstract class HttpCoreTransportTest {
                 new BasicResponseConsumer<>(new StringAsyncEntityConsumer()), TIMEOUT, null);
         final Message<HttpResponse, String> message2 = resultFuture2.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
         assertThat(message2, CoreMatchers.notNullValue());
-        final HttpResponse response2 = message2.getHead();
+        final HttpResponse response2 = message2.head();
         assertThat(response2.getCode(), CoreMatchers.equalTo(HttpStatus.SC_OK));
-        final String body2 = message2.getBody();
+        final String body2 = message2.body();
         assertThat(body2, CoreMatchers.equalTo("some other stuff"));
 
         final Future<Message<HttpResponse, String>> resultFuture3 = requester.execute(
@@ -175,9 +175,9 @@ abstract class HttpCoreTransportTest {
                 new BasicResponseConsumer<>(new StringAsyncEntityConsumer()), TIMEOUT, null);
         final Message<HttpResponse, String> message3 = resultFuture3.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
         assertThat(message3, CoreMatchers.notNullValue());
-        final HttpResponse response3 = message3.getHead();
+        final HttpResponse response3 = message3.head();
         assertThat(response3.getCode(), CoreMatchers.equalTo(HttpStatus.SC_OK));
-        final String body3 = message3.getBody();
+        final String body3 = message3.body();
         assertThat(body3, CoreMatchers.equalTo("some more stuff"));
     }
 
@@ -200,9 +200,9 @@ abstract class HttpCoreTransportTest {
                     new BasicResponseConsumer<>(new StringAsyncEntityConsumer()), null);
             final Message<HttpResponse, String> message1 = resultFuture1.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
             assertThat(message1, CoreMatchers.notNullValue());
-            final HttpResponse response1 = message1.getHead();
+            final HttpResponse response1 = message1.head();
             assertThat(response1.getCode(), CoreMatchers.equalTo(HttpStatus.SC_OK));
-            final String body1 = message1.getBody();
+            final String body1 = message1.body();
             assertThat(body1, CoreMatchers.equalTo("some stuff"));
 
             final Future<Message<HttpResponse, String>> resultFuture2 = endpoint.execute(
@@ -211,9 +211,9 @@ abstract class HttpCoreTransportTest {
                     new BasicResponseConsumer<>(new StringAsyncEntityConsumer()), null);
             final Message<HttpResponse, String> message2 = resultFuture2.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
             assertThat(message2, CoreMatchers.notNullValue());
-            final HttpResponse response2 = message2.getHead();
+            final HttpResponse response2 = message2.head();
             assertThat(response2.getCode(), CoreMatchers.equalTo(HttpStatus.SC_OK));
-            final String body2 = message2.getBody();
+            final String body2 = message2.body();
             assertThat(body2, CoreMatchers.equalTo("some other stuff"));
 
             final Future<Message<HttpResponse, String>> resultFuture3 = endpoint.execute(
@@ -222,9 +222,9 @@ abstract class HttpCoreTransportTest {
                     new BasicResponseConsumer<>(new StringAsyncEntityConsumer()), null);
             final Message<HttpResponse, String> message3 = resultFuture3.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
             assertThat(message3, CoreMatchers.notNullValue());
-            final HttpResponse response3 = message3.getHead();
+            final HttpResponse response3 = message3.head();
             assertThat(response3.getCode(), CoreMatchers.equalTo(HttpStatus.SC_OK));
-            final String body3 = message3.getBody();
+            final String body3 = message3.body();
             assertThat(body3, CoreMatchers.equalTo("some more stuff"));
 
         } finally {
@@ -264,9 +264,9 @@ abstract class HttpCoreTransportTest {
                 final Future<Message<HttpResponse, String>> resultFuture = queue.remove();
                 final Message<HttpResponse, String> message = resultFuture.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
                 assertThat(message, CoreMatchers.notNullValue());
-                final HttpResponse response = message.getHead();
+                final HttpResponse response = message.head();
                 assertThat(response.getCode(), CoreMatchers.equalTo(HttpStatus.SC_OK));
-                final String body = message.getBody();
+                final String body = message.body();
                 assertThat(body, CoreMatchers.containsString("stuff"));
             }
 
@@ -297,9 +297,9 @@ abstract class HttpCoreTransportTest {
             final Future<Message<HttpResponse, String>> resultFuture = queue.remove();
             final Message<HttpResponse, String> message = resultFuture.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
             assertThat(message, CoreMatchers.notNullValue());
-            final HttpResponse response = message.getHead();
+            final HttpResponse response = message.head();
             assertThat(response.getCode(), CoreMatchers.equalTo(HttpStatus.SC_OK));
-            assertThat(message.getBody(), CoreMatchers.nullValue());
+            assertThat(message.body(), CoreMatchers.nullValue());
         }
     }
 
