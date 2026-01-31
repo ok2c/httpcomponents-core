@@ -27,7 +27,6 @@
 
 package org.apache.hc.core5.testing.nio;
 
-import org.junit.jupiter.api.Assertions;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -65,6 +64,7 @@ import org.apache.hc.core5.testing.SSLTestContexts;
 import org.apache.hc.core5.testing.extension.nio.H2AsyncServerResource;
 import org.apache.hc.core5.testing.extension.nio.H2MultiplexingRequesterResource;
 import org.apache.hc.core5.util.Timeout;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -139,9 +139,9 @@ abstract class H2AlpnTest {
 
         assertTrue(h2Allowed, "h2 negotiation was disabled, but h2 was negotiated");
         Assertions.assertNotNull(message1);
-        final HttpResponse response1 = message1.getHead();
+        final HttpResponse response1 = message1.head();
         Assertions.assertEquals(HttpStatus.SC_OK, response1.getCode());
-        final String body1 = message1.getBody();
+        final String body1 = message1.body();
         Assertions.assertEquals("some stuff", body1);
     }
 

@@ -28,7 +28,6 @@
 package org.apache.hc.core5.testing.nio;
 
 
-import org.junit.jupiter.api.Assertions;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -69,6 +68,7 @@ import org.apache.hc.core5.testing.SSLTestContexts;
 import org.apache.hc.core5.testing.extension.nio.HttpAsyncRequesterResource;
 import org.apache.hc.core5.testing.extension.nio.HttpAsyncServerResource;
 import org.apache.hc.core5.util.Timeout;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -150,9 +150,9 @@ abstract class Http1AuthenticationTest {
                 new BasicResponseConsumer<>(new StringAsyncEntityConsumer()), TIMEOUT, null);
         final Message<HttpResponse, String> message1 = resultFuture1.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
         Assertions.assertNotNull(message1);
-        final HttpResponse response1 = message1.getHead();
+        final HttpResponse response1 = message1.head();
         Assertions.assertEquals(HttpStatus.SC_UNAUTHORIZED, response1.getCode());
-        final String body1 = message1.getBody();
+        final String body1 = message1.body();
         Assertions.assertEquals("You shall not pass!!!", body1);
 
         final HttpRequest request2 = new BasicHttpRequest(Method.GET, target, "/stuff");
@@ -162,9 +162,9 @@ abstract class Http1AuthenticationTest {
                 new BasicResponseConsumer<>(new StringAsyncEntityConsumer()), TIMEOUT, null);
         final Message<HttpResponse, String> message2 = resultFuture2.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
         Assertions.assertNotNull(message2);
-        final HttpResponse response2 = message2.getHead();
+        final HttpResponse response2 = message2.head();
         Assertions.assertEquals(HttpStatus.SC_OK, response2.getCode());
-        final String body2 = message2.getBody();
+        final String body2 = message2.body();
         Assertions.assertEquals("", body2);
     }
 
@@ -188,9 +188,9 @@ abstract class Http1AuthenticationTest {
                 new BasicResponseConsumer<>(new StringAsyncEntityConsumer()), TIMEOUT, null);
         final Message<HttpResponse, String> message1 = resultFuture1.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
         Assertions.assertNotNull(message1);
-        final HttpResponse response1 = message1.getHead();
+        final HttpResponse response1 = message1.head();
         Assertions.assertEquals(HttpStatus.SC_UNAUTHORIZED, response1.getCode());
-        final String body1 = message1.getBody();
+        final String body1 = message1.body();
         Assertions.assertEquals("You shall not pass!!!", body1);
 
         final HttpRequest request2 = new BasicHttpRequest(Method.POST, target, "/stuff");
@@ -200,9 +200,9 @@ abstract class Http1AuthenticationTest {
                 new BasicResponseConsumer<>(new StringAsyncEntityConsumer()), TIMEOUT, null);
         final Message<HttpResponse, String> message2 = resultFuture2.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
         Assertions.assertNotNull(message2);
-        final HttpResponse response2 = message2.getHead();
+        final HttpResponse response2 = message2.head();
         Assertions.assertEquals(HttpStatus.SC_OK, response2.getCode());
-        final String body2 = message2.getBody();
+        final String body2 = message2.body();
         Assertions.assertEquals(new String(stuff, StandardCharsets.US_ASCII), body2);
     }
 
@@ -228,9 +228,9 @@ abstract class Http1AuthenticationTest {
                 new BasicResponseConsumer<>(new StringAsyncEntityConsumer()), TIMEOUT, null);
         final Message<HttpResponse, String> message1 = resultFuture1.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
         Assertions.assertNotNull(message1);
-        final HttpResponse response1 = message1.getHead();
+        final HttpResponse response1 = message1.head();
         Assertions.assertEquals(HttpStatus.SC_UNAUTHORIZED, response1.getCode());
-        final String body1 = message1.getBody();
+        final String body1 = message1.body();
         Assertions.assertEquals("You shall not pass!!!", body1);
 
         final HttpRequest request2 = new BasicHttpRequest(Method.POST, target, "/stuff");
@@ -241,9 +241,9 @@ abstract class Http1AuthenticationTest {
                 new BasicResponseConsumer<>(new StringAsyncEntityConsumer()), TIMEOUT, null);
         final Message<HttpResponse, String> message2 = resultFuture2.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
         Assertions.assertNotNull(message2);
-        final HttpResponse response2 = message2.getHead();
+        final HttpResponse response2 = message2.head();
         Assertions.assertEquals(HttpStatus.SC_OK, response2.getCode());
-        final String body2 = message2.getBody();
+        final String body2 = message2.body();
         Assertions.assertEquals(new String(stuff, StandardCharsets.US_ASCII), body2);
     }
 

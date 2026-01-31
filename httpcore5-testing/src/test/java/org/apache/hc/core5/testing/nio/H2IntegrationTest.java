@@ -230,8 +230,8 @@ abstract class H2IntegrationTest extends HttpIntegrationTest {
             final Future<Message<HttpResponse, String>> future = responseQueue.remove();
             final Message<HttpResponse, String> result = future.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
             Assertions.assertNotNull(result);
-            final HttpResponse response1 = result.getHead();
-            final String entity = result.getBody();
+            final HttpResponse response1 = result.head();
+            final String entity = result.body();
             Assertions.assertNotNull(response1);
             Assertions.assertEquals(200, response1.getCode());
             Assertions.assertEquals("Hi there", entity);
@@ -240,8 +240,8 @@ abstract class H2IntegrationTest extends HttpIntegrationTest {
         while (!pushMessageQueue.isEmpty()) {
             final Message<HttpResponse, String> pushMessage = pushMessageQueue.remove();
             Assertions.assertNotNull(pushMessage);
-            final HttpResponse response = pushMessage.getHead();
-            final String entity = pushMessage.getBody();
+            final HttpResponse response = pushMessage.head();
+            final String entity = pushMessage.body();
             Assertions.assertEquals(200, response.getCode());
             Assertions.assertNotNull(entity);
             final StringTokenizer t1 = new StringTokenizer(entity, "\r\n");
@@ -323,8 +323,8 @@ abstract class H2IntegrationTest extends HttpIntegrationTest {
                 null);
         final Message<HttpResponse, String> result1 = future1.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
         Assertions.assertNotNull(result1);
-        final HttpResponse response1 = result1.getHead();
-        final String entity1 = result1.getBody();
+        final HttpResponse response1 = result1.head();
+        final String entity1 = result1.body();
         Assertions.assertNotNull(response1);
         Assertions.assertEquals(200, response1.getCode());
         Assertions.assertEquals("Hi there", entity1);
@@ -382,7 +382,7 @@ abstract class H2IntegrationTest extends HttpIntegrationTest {
             final Future<Message<HttpResponse, Void>> future = queue.remove();
             final Message<HttpResponse, Void> result = future.get(TIMEOUT.getDuration(), TIMEOUT.getTimeUnit());
             Assertions.assertNotNull(result);
-            final HttpResponse response = result.getHead();
+            final HttpResponse response = result.head();
             Assertions.assertNotNull(response);
             Assertions.assertEquals(200, response.getCode());
         }
