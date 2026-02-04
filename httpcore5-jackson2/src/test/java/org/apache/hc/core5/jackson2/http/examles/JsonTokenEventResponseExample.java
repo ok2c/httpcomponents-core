@@ -27,21 +27,19 @@
 package org.apache.hc.core5.jackson2.http.examles;
 
 import java.net.URI;
-import java.util.concurrent.Future;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.apache.hc.core5.concurrent.FutureCallback;
-import org.apache.hc.core5.http.ContentType;
-import org.apache.hc.core5.http.HttpHeaders;
 import org.apache.hc.core5.http.impl.bootstrap.AsyncRequesterBootstrap;
 import org.apache.hc.core5.http.impl.bootstrap.HttpAsyncRequester;
-import org.apache.hc.core5.http.nio.support.AsyncRequestBuilder;
+import org.apache.hc.core5.http.protocol.HttpCoreContext;
 import org.apache.hc.core5.io.CloseMode;
 import org.apache.hc.core5.jackson2.JsonTokenEventHandler;
-import org.apache.hc.core5.jackson2.http.JsonResponseConsumers;
+import org.apache.hc.core5.jackson2.http.AsyncJsonClientPipeline;
 import org.apache.hc.core5.reactor.IOReactorConfig;
 import org.apache.hc.core5.util.Timeout;
 
@@ -69,101 +67,108 @@ public class JsonTokenEventResponseExample {
         final JsonFactory factory = new JsonFactory();
         final ObjectMapper objectMapper = new ObjectMapper(factory);
 
-        final Future<?> future = requester.execute(
-                AsyncRequestBuilder.get(uri)
-                        .addHeader(HttpHeaders.ACCEPT, ContentType.APPLICATION_JSON.toString())
-                        .build(),
-                JsonResponseConsumers.create(
-                        objectMapper.getFactory(),
-                        messageHead -> System.out.println("Response status: " + messageHead.getCode()),
-                        error -> System.out.println("Error: " + error),
-                        new JsonTokenEventHandler() {
+        final CountDownLatch latch = new CountDownLatch(1);
+        requester.execute(
+                AsyncJsonClientPipeline.assemble(objectMapper)
+                        .request()
+                        .get(uri)
+                        .response()
+                        .asEvents(
+                                response -> System.out.println("Response status: " + response.getCode()),
+                                error -> System.out.println("Error: " + error),
+                                new JsonTokenEventHandler() {
+
+                                    @Override
+                                    public void objectStart() {
+                                        System.out.print("object start/");
+                                    }
+
+                                    @Override
+                                    public void objectEnd() {
+                                        System.out.print("object end/");
+                                    }
+
+                                    @Override
+                                    public void arrayStart() {
+                                        System.out.print("array start/");
+                                    }
+
+                                    @Override
+                                    public void arrayEnd() {
+                                        System.out.print("array end/");
+                                    }
+
+                                    @Override
+                                    public void field(final String name) {
+                                        System.out.print(name + "=");
+                                    }
+
+                                    @Override
+                                    public void embeddedObject(final Object object) {
+                                        System.out.print(object + "/");
+                                    }
+
+                                    @Override
+                                    public void value(final String value) {
+                                        System.out.print("\"" + value + "\"/");
+                                    }
+
+                                    @Override
+                                    public void value(final int value) {
+                                        System.out.print(value + "/");
+                                    }
+
+                                    @Override
+                                    public void value(final long value) {
+                                        System.out.print(value + "/");
+                                    }
+
+                                    @Override
+                                    public void value(final double value) {
+                                        System.out.print(value + "/");
+                                    }
+
+                                    @Override
+                                    public void value(final boolean value) {
+                                        System.out.print(value + "/");
+                                    }
+
+                                    @Override
+                                    public void valueNull() {
+                                        System.out.print("null/");
+                                    }
+
+                                    @Override
+                                    public void endOfStream() {
+                                        System.out.println("stream end/");
+                                    }
+
+                                })
+                        .result(new FutureCallback<Void>() {
 
                             @Override
-                            public void objectStart() {
-                                System.out.print("object start/");
+                            public void completed(final Void input) {
+                                System.out.println("Object received");
+                                latch.countDown();
                             }
 
                             @Override
-                            public void objectEnd() {
-                                System.out.print("object end/");
+                            public void failed(final Exception ex) {
+                                ex.printStackTrace(System.out);
+                                latch.countDown();
                             }
 
                             @Override
-                            public void arrayStart() {
-                                System.out.print("array start/");
+                            public void cancelled() {
+                                latch.countDown();
                             }
 
-                            @Override
-                            public void arrayEnd() {
-                                System.out.print("array end/");
-                            }
-
-                            @Override
-                            public void field(final String name) {
-                                System.out.print(name + "=");
-                            }
-
-                            @Override
-                            public void embeddedObject(final Object object) {
-                                System.out.print(object + "/");
-                            }
-
-                            @Override
-                            public void value(final String value) {
-                                System.out.print("\"" + value + "\"/");
-                            }
-
-                            @Override
-                            public void value(final int value) {
-                                System.out.print(value + "/");
-                            }
-
-                            @Override
-                            public void value(final long value) {
-                                System.out.print(value + "/");
-                            }
-
-                            @Override
-                            public void value(final double value) {
-                                System.out.print(value + "/");
-                            }
-
-                            @Override
-                            public void value(final boolean value) {
-                                System.out.print(value + "/");
-                            }
-
-                            @Override
-                            public void valueNull() {
-                                System.out.print("null/");
-                            }
-
-                            @Override
-                            public void endOfStream() {
-                                System.out.println("stream end/");
-                            }
-
-                        }),
+                        })
+                        .create(),
                 Timeout.ofMinutes(1),
-                new FutureCallback<Void>() {
+                HttpCoreContext.create());
 
-                    @Override
-                    public void completed(final Void input) {
-                        System.out.println("Object received");
-                    }
-
-                    @Override
-                    public void failed(final Exception ex) {
-                        ex.printStackTrace(System.out);
-                    }
-
-                    @Override
-                    public void cancelled() {
-                    }
-
-                });
-        future.get();
+        latch.await();
 
         System.out.println("Shutting down I/O reactor");
         requester.initiateShutdown();
