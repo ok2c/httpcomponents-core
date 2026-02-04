@@ -27,7 +27,6 @@
 package org.apache.hc.core5.http2.examples;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -35,26 +34,28 @@ import java.util.List;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hc.core5.function.Supplier;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.EndpointDetails;
-import org.apache.hc.core5.http.EntityDetails;
 import org.apache.hc.core5.http.Header;
 import org.apache.hc.core5.http.HttpConnection;
-import org.apache.hc.core5.http.HttpException;
 import org.apache.hc.core5.http.HttpRequest;
+import org.apache.hc.core5.http.HttpResponse;
 import org.apache.hc.core5.http.HttpStatus;
 import org.apache.hc.core5.http.Message;
+import org.apache.hc.core5.http.Method;
 import org.apache.hc.core5.http.ProtocolException;
 import org.apache.hc.core5.http.URIScheme;
 import org.apache.hc.core5.http.impl.bootstrap.HttpAsyncServer;
-import org.apache.hc.core5.http.nio.AsyncRequestConsumer;
-import org.apache.hc.core5.http.nio.AsyncServerRequestHandler;
-import org.apache.hc.core5.http.nio.entity.AsyncEntityProducers;
-import org.apache.hc.core5.http.nio.entity.DiscardingEntityConsumer;
-import org.apache.hc.core5.http.nio.support.AsyncResponseBuilder;
-import org.apache.hc.core5.http.nio.support.BasicRequestConsumer;
-import org.apache.hc.core5.http.protocol.HttpContext;
+import org.apache.hc.core5.http.impl.routing.RequestRouter;
+import org.apache.hc.core5.http.message.BasicHttpResponse;
+import org.apache.hc.core5.http.nio.AsyncServerExchangeHandler;
+import org.apache.hc.core5.http.nio.entity.FileEntityProducer;
+import org.apache.hc.core5.http.nio.entity.StringAsyncEntityProducer;
+import org.apache.hc.core5.http.nio.support.AsyncServerPipeline;
+import org.apache.hc.core5.http.nio.support.BasicResponseProducer;
 import org.apache.hc.core5.http.protocol.HttpCoreContext;
+import org.apache.hc.core5.http.protocol.HttpDateGenerator;
 import org.apache.hc.core5.http2.HttpVersionPolicy;
 import org.apache.hc.core5.http2.frame.RawFrame;
 import org.apache.hc.core5.http2.impl.nio.H2StreamListener;
@@ -86,6 +87,61 @@ public class H2FileServerExample {
                 .setSoTimeout(15, TimeUnit.SECONDS)
                 .setTcpNoDelay(true)
                 .build();
+
+        final Supplier<AsyncServerExchangeHandler> exchangeHandlerSupplier = AsyncServerPipeline.assemble()
+                // Read GET / HEAD requests ignoring their content body
+                .request(Method.GET, Method.HEAD)
+                .ignoreContent()
+                // Write out responses by streaming out content of a file
+                .response()
+                .<File>produce(m -> {
+                    final HttpResponse response = m.head();
+                    final File file = m.body();
+                    if (file != null) {
+                        final ContentType contentType;
+                        final String filename = TextUtils.toLowerCase(file.getName());
+                        if (filename.endsWith(".txt")) {
+                            contentType = ContentType.TEXT_PLAIN;
+                        } else if (filename.endsWith(".html") || filename.endsWith(".htm")) {
+                            contentType = ContentType.TEXT_HTML;
+                        } else if (filename.endsWith(".xml")) {
+                            contentType = ContentType.TEXT_XML;
+                        } else {
+                            contentType = ContentType.DEFAULT_BINARY;
+                        }
+                        return new BasicResponseProducer(response, new FileEntityProducer(file, contentType));
+                    } else {
+                        final Object error = m.error();
+                        return new BasicResponseProducer(response, error != null ? new StringAsyncEntityProducer(error.toString()) : null);
+                    }
+                })
+                // Map exceptions to a response message
+                .errorMessage(Throwable::getMessage)
+                // Generate a response to the request
+                .handle((m, context) -> {
+                    final HttpRequest request = m.head();
+                    final URI requestUri;
+                    try {
+                        requestUri = request.getUri();
+                    } catch (final URISyntaxException ex) {
+                        throw new ProtocolException(ex.getMessage(), ex);
+                    }
+                    final String path = requestUri.getPath();
+                    final File file = new File(docRoot, path);
+                    if (!file.exists()) {
+                        println("File " + file.getPath() + " not found");
+                        return Message.error(new BasicHttpResponse(HttpStatus.SC_NOT_FOUND), "File not found");
+                    } else if (!file.canRead() || file.isDirectory()) {
+                        println("Cannot read file " + file.getPath());
+                        return Message.error(new BasicHttpResponse(HttpStatus.SC_FORBIDDEN), "File cannot be accessed");
+                    } else {
+                        final HttpCoreContext coreContext = HttpCoreContext.cast(context);
+                        final EndpointDetails endpoint = coreContext.getEndpointDetails();
+                        println(endpoint + " | serving file " + file.getPath());
+                        return Message.of(new BasicHttpResponse(HttpStatus.SC_OK), file);
+                    }
+                })
+                .supplier();
 
         final HttpAsyncServer server = H2ServerBootstrap.bootstrap()
                 .setIOReactorConfig(config)
@@ -123,75 +179,10 @@ public class H2FileServerExample {
                     }
 
                 })
-                .register("*", new AsyncServerRequestHandler<Message<HttpRequest, Void>>() {
-
-                    @Override
-                    public AsyncRequestConsumer<Message<HttpRequest, Void>> prepare(
-                            final HttpRequest request,
-                            final EntityDetails entityDetails,
-                            final HttpContext context) throws HttpException {
-                        return new BasicRequestConsumer<>(entityDetails != null ? new DiscardingEntityConsumer<>() : null);
-                    }
-
-                    @Override
-                    public void handle(
-                            final Message<HttpRequest, Void> message,
-                            final ResponseTrigger responseTrigger,
-                            final HttpContext localContext) throws HttpException, IOException {
-                        final HttpCoreContext context = HttpCoreContext.cast(localContext);
-                        final HttpRequest request = message.head();
-                        final URI requestUri;
-                        try {
-                            requestUri = request.getUri();
-                        } catch (final URISyntaxException ex) {
-                            throw new ProtocolException(ex.getMessage(), ex);
-                        }
-                        final String path = requestUri.getPath();
-                        final File file = new File(docRoot, path);
-                        if (!file.exists()) {
-
-                            System.out.println("File " + file.getPath() + " not found");
-                            responseTrigger.submitResponse(
-                                    AsyncResponseBuilder.create(HttpStatus.SC_NOT_FOUND)
-                                            .setEntity("<html><body><h1>File" + file.getPath() +
-                                                    " not found</h1></body></html>", ContentType.TEXT_HTML)
-                                            .build(),
-                                    context);
-
-                        } else if (!file.canRead() || file.isDirectory()) {
-
-                            System.out.println("Cannot read file " + file.getPath());
-                            responseTrigger.submitResponse(
-                                    AsyncResponseBuilder.create(HttpStatus.SC_FORBIDDEN)
-                                            .setEntity("<html><body><h1>Access denied</h1></body></html>", ContentType.TEXT_HTML)
-                                            .build(),
-                                    context);
-
-                        } else {
-
-                            final ContentType contentType;
-                            final String filename = TextUtils.toLowerCase(file.getName());
-                            if (filename.endsWith(".txt")) {
-                                contentType = ContentType.TEXT_PLAIN;
-                            } else if (filename.endsWith(".html") || filename.endsWith(".htm")) {
-                                contentType = ContentType.TEXT_HTML;
-                            } else if (filename.endsWith(".xml")) {
-                                contentType = ContentType.TEXT_XML;
-                            } else {
-                                contentType = ContentType.DEFAULT_BINARY;
-                            }
-
-                            final EndpointDetails endpoint = context.getEndpointDetails();
-                            System.out.println(endpoint + ": serving file " + file.getPath());
-                            responseTrigger.submitResponse(
-                                    AsyncResponseBuilder.create(HttpStatus.SC_OK)
-                                            .setEntity(AsyncEntityProducers.create(file, contentType))
-                                            .build(),
-                                    context);
-                        }
-                    }
-
-                })
+                .setRequestRouter(RequestRouter.<Supplier<AsyncServerExchangeHandler>>builder()
+                        .addRoute(RequestRouter.LOCAL_AUTHORITY, "*", exchangeHandlerSupplier)
+                        .resolveAuthority(RequestRouter.LOCAL_AUTHORITY_RESOLVER)
+                        .build())
                 .create();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -204,6 +195,10 @@ public class H2FileServerExample {
         final ListenerEndpoint listenerEndpoint = future.get();
         System.out.print("Listening on " + listenerEndpoint.getAddress());
         server.awaitShutdown(TimeValue.ofDays(Long.MAX_VALUE));
+    }
+
+    static void println(final String msg) {
+        System.out.println(HttpDateGenerator.INSTANCE.getCurrentDate() + " | " + msg);
     }
 
 }

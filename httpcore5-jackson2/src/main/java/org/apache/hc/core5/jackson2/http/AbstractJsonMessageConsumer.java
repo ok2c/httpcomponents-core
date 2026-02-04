@@ -67,6 +67,11 @@ abstract class AbstractJsonMessageConsumer<H extends HttpMessage, T> implements 
                                   final EntityDetails entityDetails,
                                   final HttpContext context,
                                   final FutureCallback<T> resultCallback) throws HttpException, IOException {
+        if (entityDetails == null) {
+            resultCallback.completed(null);
+            return;
+        }
+
         final ContentType contentType = ContentType.parseLenient(entityDetails.getContentType());
         if (contentType == null || ContentType.APPLICATION_JSON.isSameMimeType(contentType)) {
             final AsyncEntityConsumer<T> entityConsumer = jsonConsumerSupplier.get();
